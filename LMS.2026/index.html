@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Training Performance Dashboard — H1/2026</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Thư viện Chart.js và plugin DataLabels -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<style>
+  :root{
+    --bg: #0E1A2B;
+    --bg-card: #182C4B;
+    --ink: #F4EFE4;
+    --ink-dim: #B9C4D6;
+    --ink-mute: #7E8FA8;
+    --gold: #C9A15A;
+    --gold-soft: rgba(201,161,90,0.16);
+    --teal: #4FA893;
+    --clay: #C1553A;
+    --purple: #8B6BB0;
+    --line: rgba(244,239,228,0.10);
+    --line-strong: rgba(244,239,228,0.20);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(180deg, transparent, transparent 34px, var(--line) 35px),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:36px 28px 80px;}
+
+  .masthead{
+    border-bottom:2px solid var(--gold);
+    padding-bottom:22px;
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:10px;
+  }
+  h1.title{
+    font-family:'Source Serif 4',serif;
+    font-weight:700;
+    font-size:32px;
+    line-height:1.15;
+    margin:0 0 8px 0;
+    letter-spacing:-.01em;
+  }
+  .subtitle{color:var(--ink-dim);font-size:14.5px;max-width:600px;}
+  .meta-box{
+    text-align:right;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--ink-mute);
+    line-height:1.8;
+  }
+  .meta-box b{color:var(--ink-dim);font-weight:500;}
+
+  .tabs{
+    display:flex;
+    gap:2px;
+    margin:28px 0 26px;
+    border-bottom:1px solid var(--line-strong);
+    flex-wrap:wrap;
+  }
+  .tab-btn{
+    font-family:'IBM Plex Mono',monospace;
+    background:transparent;
+    border:none;
+    color:var(--ink-mute);
+    font-size:12.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:12px 18px 14px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transition:all .15s ease;
+    position:relative;
+    top:1px;
+  }
+  .tab-btn:hover{color:var(--ink-dim);}
+  .tab-btn.active{color:var(--gold);border-bottom:2px solid var(--gold);}
+
+  .page{display:none;animation:fade .3s ease;}
+  .page.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .section-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:36px 0 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-label::after{content:"";flex:1;height:1px;background:var(--line-strong);}
+  .section-label:first-of-type{margin-top:0;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .kpi-row.c3{grid-template-columns:repeat(3,1fr);}
+  .kpi-row.c5{grid-template-columns:repeat(5,1fr);}
+  .kpi{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-left:3px solid var(--gold);
+    border-radius:2px;
+    padding:16px 18px;
+  }
+  .kpi .lbl{font-size:11.5px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+  .kpi .val{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:600;color:var(--ink);letter-spacing:-.01em;}
+  .kpi .sub{font-size:12px;color:var(--ink-mute);margin-top:6px;}
+  .kpi.risk{border-left-color:var(--clay);}
+  .kpi.risk .val{color:#E27D63;}
+  .kpi.good{border-left-color:var(--teal);}
+  .kpi.good .val{color:var(--teal);}
+
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-top:14px;}
+  .grid2.even{grid-template-columns:1fr 1fr;}
+  .panel{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:24px 24px 20px;
+  }
+  .panel h3{
+    font-family:'Source Serif 4',serif;
+    font-weight:600;
+    font-size:17px;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  .panel .p-note{font-size:12px;color:var(--ink-mute);margin-bottom:18px;}
+  
+  .chart-box{
+    position:relative;
+    width:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-mute);
+    padding:8px 10px;
+    border-bottom:1px solid var(--line-strong);
+  }
+  tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+    color:var(--ink-dim);
+  }
+  tbody tr:hover td{background:rgba(244,239,228,0.03);color:var(--ink);}
+  td.num,th.num{text-align:right;font-family:'IBM Plex Mono',monospace;}
+  td.name{color:var(--ink);font-weight:500;}
+  .tag{
+    display:inline-block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    padding:2px 7px;
+    border-radius:2px;
+    background:var(--gold-soft);
+    color:var(--gold);
+  }
+
+  .track-row{margin-bottom:18px;}
+  .track-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .track-name{font-family:'Source Serif 4',serif;font-size:15px;color:var(--ink);}
+  .track-pct{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--teal);font-weight:600;}
+  .track-bar-bg{height:8px;background:#0E1A2B;border-radius:4px;overflow:hidden;border:1px solid var(--line);}
+  .track-bar-fill{height:100%;background:linear-gradient(90deg,var(--teal),#3E8C7A);border-radius:4px;}
+  .track-sub{font-size:11.5px;color:var(--ink-mute);margin-top:5px;font-family:'IBM Plex Mono',monospace;}
+
+  /* funnel */
+  .funnel-svg-wrap{display:flex;justify-content:center;padding:15px 0;}
+  .funnel-legend{display:flex;justify-content:center;gap:24px;margin-top:18px;flex-wrap:wrap;}
+  .funnel-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-dim);}
+  .funnel-swatch{width:11px;height:11px;border-radius:2px;}
+
+  /* Key actions */
+  .action-list{list-style:none;margin:0;padding:0;}
+  .action-item{
+    display:flex;
+    align-items:center;
+    gap:40px;
+    padding:26px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .action-item:last-child{border-bottom:none;}
+  .action-tag{
+    flex:0 0 140px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--gold);
+  }
+  .action-text{
+    flex:1;
+    color:var(--ink-dim);
+    font-size:14.5px;
+    line-height:1.7;
+  }
+  .action-text b{color:var(--ink);font-weight:600;}
+  
+  .closing-statement{
+    margin-top:24px;
+    padding:28px 24px;
+    background:linear-gradient(135deg, rgba(201,161,90,0.06), rgba(139,107,176,0.04));
+    border:1px solid rgba(201,161,90,0.15);
+    border-radius:3px;
+    font-family:'Source Serif 4',serif;
+    font-size:18px;
+    font-weight:500;
+    line-height:1.6;
+    color:var(--ink);
+    text-align:center;
+  }
+
+  .footnote{
+    margin-top:44px;
+    padding-top:18px;
+    border-top:1px solid var(--line-strong);
+    font-size:12px;
+    color:var(--ink-mute);
+    line-height:1.9;
+  }
+  .footnote b{color:var(--ink-dim);}
+  .footnote ul{margin:6px 0 0;padding-left:18px;}
+
+  @media (max-width:820px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .kpi-row.c3{grid-template-columns:repeat(1,1fr);}
+    .kpi-row.c5{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+    .grid2.even{grid-template-columns:1fr;}
+    .meta-box{text-align:left;}
+    .action-item{flex-direction:column;align-items:flex-start;gap:12px;padding:20px 8px;}
+    .action-tag{flex:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <div class="eyebrow">Team L&D KiotViet· Báo cáo nội bộ</div>
+      <h1 class="title">Training Performance Dashboard</h1>
+      <div class="subtitle">Tổng hợp hoạt động đào tạo, độ phủ học viên và hiệu suất LMS — Kỳ báo cáo H1/2026 (Tháng 1–6).</div>
+    </div>
+    <div class="meta-box">
+      <div><b>Kỳ báo cáo</b> &nbsp;H1 / 2026</div>
+      <div><b>Nguồn dữ liệu</b> &nbsp;Data_đào_tạo_2025</div>
+      <div><b>Phạm vi</b> &nbsp;1.004 học viên · 140 chương trình</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-page="p1">Training Activity Overview</button>
+    <button class="tab-btn" data-page="p2">Learner Coverage &amp; Participation</button>
+    <button class="tab-btn" data-page="p3">LMS Performance</button>
+    <button class="tab-btn" data-page="p4">Key Actions for H2</button>
+  </div>
+
+  <!-- ============= PAGE 1: TRAINING ACTIVITY OVERVIEW ============= -->
+  <div class="page active" id="p1">
+
+    <div class="kpi-row c3">
+      <div class="kpi">
+        <div class="lbl">Tổng số chương trình (H1)</div>
+        <div class="val" id="kpi-tongct">—</div>
+        <div class="sub">Tính theo tên chương trình duy nhất, đã chuẩn hoá</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Tổng học viên tham gia</div>
+        <div class="val" id="kpi-tonghv">—</div>
+        <div class="sub">Nhân sự duy nhất có ít nhất 1 lượt đào tạo</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Tổng lượt tham gia</div>
+        <div class="val" id="kpi-tongluot">—</div>
+        <div class="sub">Tổng số dòng ghi nhận đào tạo trong kỳ</div>
+      </div>
+    </div>
+
+    <div class="section-label">Cơ cấu chương trình theo Module</div>
+    <div class="panel">
+      <h3>Số chương trình theo từng Module</h3>
+      <div class="p-note">Tổng số chương trình là: 140</div>
+      <!-- Phóng to khung biểu đồ cột Module -->
+      <div class="chart-box" style="height:340px;"><canvas id="chartModule"></canvas></div>
+    </div>
+
+    <div class="section-label">Cơ cấu chương trình theo Khối &amp; Đối tượng</div>
+    <div class="grid2 even">
+      <div class="panel">
+        <h3>Số chương trình theo từng Khối</h3>
+        <div class="p-note">Sales · PTSP · DVKH · BO — một chương trình có thể được tổ chức cho nhiều khối</div>
+        <!-- Phóng to khung biểu đồ cột theo Khối -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartKhoiCT"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Số chương trình theo Đối tượng</h3>
+        <div class="p-note">Nhân viên mới vs Đang làm việc</div>
+        <!-- Cân đối kích thước biểu đồ tròn Đối tượng -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartDoiTuongCT"></canvas></div>
+        <!-- Thêm chú thích cho biểu đồ đối tượng -->
+        <div class="funnel-legend">
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#C9A15A"></span>Nhân viên mới</div>
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#8B6BB0"></span>Đang làm việc</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <b>Ghi chú phương pháp:</b>
+      <ul>
+        <li>Kỳ báo cáo giới hạn Tháng 1–6/2026 (H1 thuần) để đảm bảo tính đầy đủ của dữ liệu; một số lớp đuôi tháng 7 (batch KV15 đang tiếp diễn) chưa được tính vào kỳ này.</li>
+        <li>Khối được quy về 4 nhóm quản trị chính: <b>Sales</b>, <b>PTSP</b> (đã gộp khối Blank đối soát vào), <b>DVKH</b> và <b>BO</b>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============= PAGE 2: LEARNER COVERAGE & PARTICIPATION ============= -->
+  <div class="page" id="p2">
+
+    <div class="kpi-row c5">
+      <div class="kpi">
+        <div class="lbl">Học viên duy nhất</div>
+        <div class="val" id="kpi2-hocvien">—</div>
+        <div class="sub">Mỗi người chỉ tính 1 lần dù học nhiều chương trình</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Tổng lượt tham gia</div>
+        <div class="val" id="kpi2-luot">—</div>
+        <div class="sub">1 người học nhiều chương trình = nhiều lượt</div>
+      </div>
+      <div class="kpi good">
+        <div class="lbl">Training Reach toàn công ty</div>
+        <div class="val" id="kpi2-reach">—</div>
+        <div class="sub" id="kpi2-reach-sub">—</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Nhân sự mới Onboard</div>
+        <div class="val" id="kpi2-onboard">—</div>
+        <div class="sub">Đã tham gia lớp Hội nhập trong kỳ</div>
+      </div>
+      <div class="kpi risk">
+        <div class="lbl">Nghỉ trong lộ trình đào tạo</div>
+        <div class="val" id="kpi2-nghi">—</div>
+        <div class="sub" id="kpi2-nghi-sub">—</div>
+      </div>
+    </div>
+
+    <div class="section-label">Độ phủ &amp; Trạng thái Học viên trong Lộ trình</div>
+    <div class="grid2 even">
+      <div class="panel">
+        <h3>Độ phủ Đào tạo toàn công ty (Training Reach)</h3>
+        <div class="p-note">Số lượng học viên đã đào tạo trên tổng quy mô nhân sự toàn công ty (1.624 người)</div>
+        <!-- Phóng to và căn giữa biểu đồ tròn Training Reach -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartTrainingReach"></canvas></div>
+        <!-- Nhãn chú thích màu sắc cho Training Reach -->
+        <div class="funnel-legend">
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#4FA893"></span>Đã tham gia đào tạo</div>
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:rgba(244,239,228,0.15)"></span>Chưa tham gia đào tạo</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Trạng thái Nhân sự mới trong Lộ trình</h3>
+        <div class="p-note">Tỷ lệ giữ chân được tính trên tổng quy mô lớp Hội nhập nhân sự mới (484 người, loại trừ 2 TH trùng lặp còn 41 người OFF)</div>
+        <!-- Phóng to và căn giữa biểu đồ tròn Retention -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartNghiRoadmap"></canvas></div>
+        <!-- Nhãn chú thích màu sắc cho Trạng thái nhân sự mới -->
+        <div class="funnel-legend">
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#C9A15A"></span>Tiếp tục lộ trình</div>
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#C1553A"></span>Đã nghỉ việc</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label">Phân tích Người học &amp; Lượt tham gia theo Khối</div>
+    <div class="grid2 even">
+      <div class="panel">
+        <h3>Học viên theo Khối</h3>
+        <div class="p-note">Tổng số học viên duy nhất tham gia đào tạo theo từng khối (đã gộp Blank vào PTSP)</div>
+        <!-- Phóng to khung biểu đồ cột học viên khối -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartHocVienKhoi"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Tổng số lượt đào tạo theo Khối</h3>
+        <div class="p-note">Tổng lượt ghi nhận học tập của từng khối trong kỳ báo cáo (đã gộp Blank vào PTSP)</div>
+        <!-- Phóng to khung biểu đồ cột lượt tham gia -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartLuotKhoi"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px;">
+      <h3>Số chương trình trung bình / học viên theo Khối</h3>
+      <div class="p-note">Tổng lượt tham gia ÷ Số học viên duy nhất của từng khối (đã gộp Blank vào PTSP)</div>
+      <!-- Phóng to khung biểu đồ cột trung bình chương trình -->
+      <div class="chart-box" style="height:320px;"><canvas id="chartTBChuongTrinhKhoi"></canvas></div>
+    </div>
+
+    <div class="section-label">Coverage cho các chương trình bắt buộc</div>
+    <div class="panel">
+      <h3>Lộ trình bắt buộc — Nhân sự mới (từ khi học Hội nhập)</h3>
+      <div class="p-note">Nhóm thuộc diện học = nhân sự đã tham gia Hội nhập (<span id="tong-dien-hoc" style="color:var(--gold)"></span> người) · Coverage = Đã học (Pass) / Tổng thuộc diện học</div>
+      <div id="mandatoryList"></div>
+      <table style="margin-top:6px;">
+        <thead><tr><th>Chương trình</th><th>Nhóm thuộc diện học</th><th class="num">Đã học</th><th class="num">Tổng thuộc diện</th><th class="num">Coverage</th></tr></thead>
+        <tbody id="tblMandatory"></tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Nghỉ trong thời gian đào tạo — theo Khối &amp; Khu vực</div>
+    <div class="grid2 even">
+      <div class="panel">
+        <h3>Cơ cấu nhân sự nghỉ việc theo Khối</h3>
+        <!-- Đã bỏ dòng note chi tiết thừa theo yêu cầu -->
+        <div class="chart-box" style="height:320px;"><canvas id="chartNghiKhoi"></canvas></div>
+        <!-- Nhãn chú thích màu sắc cho Cơ cấu nghỉ việc theo Khối -->
+        <div class="funnel-legend">
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#C1553A"></span>Sales</div>
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#4FA893"></span>PTSP</div>
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#C9A15A"></span>DVKH</div>
+          <div class="funnel-legend-item"><span class="funnel-swatch" style="background:#8B6BB0"></span>BO</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Tỷ lệ nghỉ theo Khu vực (Nhóm phòng ban)</h3>
+        <div class="p-note">Chỉ hiển thị khu vực có ghi nhận trong nhóm Hội nhập</div>
+        <table>
+          <thead><tr><th>Khu vực</th><th class="num">Tổng</th><th class="num">Nghỉ</th><th class="num">Tỷ lệ</th></tr></thead>
+          <tbody id="tblNghiKhuVuc"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <b>Ghi chú phương pháp:</b>
+      <ul>
+        <li>Training Reach = Học viên duy nhất / Tổng nhân sự toàn công ty (<span id="tong-nhansu-note"></span> người, số liệu do phòng cung cấp).</li>
+        <li>"Nghỉ trong lộ trình đào tạo" theo dõi toàn bộ hành trình học tập của nhóm Nhân sự mới kể từ buổi Hội nhập đầu tiên — không giới hạn ở riêng lớp Hội nhập.</li>
+        <li>Khối <b>BO (Back Office)</b>: Bao gồm các phòng ban Finance, BOD Assistant, Finance and Accounting, Finance Services, Marketing, HR, IT và BOD. Chỉ số đào tạo khối BO đếm duy nhất (countunique) theo <b>Mã lớp</b> thực tế triển khai.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============= PAGE 3: LMS PERFORMANCE ============= -->
+  <div class="page" id="p3">
+
+    <div class="kpi-row">
+      <div class="kpi good">
+        <div class="lbl">Khoá học trên LMS</div>
+        <div class="val" id="kpi3-khoahoc">—</div>
+        <div class="sub">Chuyên đề học chuẩn hóa (gộp nhóm lớp)</div>
+      </div>
+      <div class="kpi good">
+        <div class="lbl">Học viên qua LMS</div>
+        <div class="val" id="kpi3-hocvien">—</div>
+        <div class="sub" id="kpi3-hocvien-sub">—</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Completion Rate</div>
+        <div class="val" id="kpi3-completion">—</div>
+        <div class="sub">(Tổng − OFF) / Tổng</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Pass Rate</div>
+        <div class="val" id="kpi3-pass">—</div>
+        <div class="sub">(Tổng − Fail − OFF) / Tổng</div>
+      </div>
+    </div>
+
+    <div class="section-label">Funnel: Assigned → Completed → Passed</div>
+    <div class="panel">
+      <div class="funnel-svg-wrap">
+        <!-- Phễu 3D thiết kế lại theo dạng Ellipse Xếp Lớp (Layered) tương phản bóng đổ sắc nét -->
+        <svg id="funnelSvg" width="520" height="290" viewBox="0 0 520 290">
+          <!-- Segment 1 (Assigned - Value 1.688) -->
+          <ellipse cx="260" cy="40" rx="180" ry="24" fill="#184C3F" />
+          <path d="M 80,40 A 180,24 0 0,0 260,64 L 260,116 A 135,18 0 0,1 125,98 Z" fill="#3D8271" />
+          <path d="M 260,64 A 180,24 0 0,0 440,40 L 395,98 A 135,18 0 0,1 260,116 Z" fill="#4FA893" />
+          <ellipse cx="260" cy="40" rx="180" ry="24" fill="none" stroke="rgba(244,239,228,0.12)" stroke-width="1" />
+          <text x="260" y="88" text-anchor="middle" fill="#F4EFE4" font-family="'IBM Plex Mono', monospace" font-weight="700" font-size="13.5">Assigned: 1.688 (100%)</text>
+
+          <!-- Segment 2 (Completed - Value 1.676) -->
+          <ellipse cx="260" cy="122" rx="130" ry="17" fill="#6A5123" />
+          <path d="M 130,122 A 130,17 0 0,0 260,139 L 260,192 A 95,13 0 0,1 165,179 Z" fill="#A88144" />
+          <path d="M 260,139 A 130,17 0 0,0 390,122 L 355,179 A 95,13 0 0,1 260,192 Z" fill="#C9A15A" />
+          <ellipse cx="260" cy="122" rx="130" ry="17" fill="none" stroke="rgba(244,239,228,0.12)" stroke-width="1" />
+          <text x="260" y="165" text-anchor="middle" fill="#F4EFE4" font-family="'IBM Plex Mono', monospace" font-weight="700" font-size="12.5">Completed: 1.676 (99.3%)</text>
+
+          <!-- Segment 3 (Passed - Value 1.638) -->
+          <ellipse cx="260" cy="198" rx="90" ry="12" fill="#42305C" />
+          <path d="M 170,198 A 90,12 0 0,0 260,210 L 260,263 A 55,8 0 0,1 205,255 Z" fill="#715491" />
+          <path d="M 260,210 A 90,12 0 0,0 350,198 L 315,255 A 55,8 0 0,1 260,263 Z" fill="#8B6BB0" />
+          <ellipse cx="260" cy="198" rx="90" ry="12" fill="none" stroke="rgba(244,239,228,0.12)" stroke-width="1" />
+          <text x="260" y="238" text-anchor="middle" fill="#F4EFE4" font-family="'IBM Plex Mono', monospace" font-weight="700" font-size="11.5">Passed: 1.638 (97.0%)</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="section-label">Top / Bottom khoá học theo Completion Rate</div>
+    <div class="grid2 even">
+      <div class="panel">
+        <h3>Top 5 — Completion &amp; Pass rate cao nhất</h3>
+        <div class="p-note">Chỉ xét khoá có từ 10 lượt tham gia trở lên</div>
+        <table>
+          <thead><tr><th>Khoá học</th><th class="num">Lượt</th><th class="num">Completion</th><th class="num">Pass</th></tr></thead>
+          <tbody id="tblTop5"></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Bottom 5 — Completion &amp; Pass rate thấp nhất</h3>
+        <div class="p-note">Xét từ thấp lên cao (Chỉ xét khoá có từ 10 lượt tham gia trở lên)</div>
+        <table>
+          <thead><tr><th>Khoá học</th><th class="num">Lượt</th><th class="num">Completion</th><th class="num">Pass</th></tr></thead>
+          <tbody id="tblBottom5"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footnote">
+      <b>Ghi chú phương pháp:</b>
+      <ul>
+        <li>Khoá học trên LMS: Tính theo đầu chuyên đề/tiêu đề chính (ví dụ: gộp các lớp Đào tạo sản phẩm lớp 26BO14, 26BO15, 26BO16... thành 1 chương trình đào tạo sản phẩm duy nhất) thay vì đếm trùng theo mã lớp mở lẻ.</li>
+        <li>Completion rate và Pass rate được tính trên tổng lượt tham gia (không phải học viên duy nhất) để phản ánh đúng hiệu suất theo từng khoá.</li>
+        <li>Top/Bottom 5 chỉ xét các khoá có ≥10 lượt tham gia để tránh nhiễu do mẫu quá nhỏ.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============= PAGE 4: KEY ACTIONS FOR H2 ============= -->
+  <div class="page" id="p4">
+    <div class="section-label">Định hướng hành động Nửa cuối năm</div>
+    <div class="panel">
+      <!-- Tái cấu trúc danh sách định hướng hành động chuẩn chỉ, thoáng đạt -->
+      <ul class="action-list">
+        <li class="action-item">
+          <div class="action-tag">LMS</div>
+          <div class="action-text">LMS đã ổn định (Completion 99,3% · Pass 97,0%) → <b>tiếp tục sử dụng cho nội dung chuẩn hoá</b> và tập trung cải thiện vận hành thay vì mở rộng nền tảng.</div>
+        </li>
+        <li class="action-item">
+          <div class="action-tag">Onboarding</div>
+          <div class="action-text">Coverage Hội nhập đạt 99% — <b>duy trì và nâng cao chất lượng</b> thay vì mở rộng quy mô; ưu tiên rà soát chương trình Văn hoá đang có coverage thấp (40%) trong cùng lộ trình.</div>
+        </li>
+        <li class="action-item">
+          <div class="action-tag">Sales</div>
+          <div class="action-text"><b>Tập trung vào nhóm tái ký</b> (Contract renewal), không cần mở rộng thêm nếu chưa có pain point rõ ràng — đặc biệt khi khối Sales đang có tỷ lệ nghỉ trong đào tạo cao nhất (8,7%).</div>
+        </li>
+        <li class="action-item">
+          <div class="action-tag">DVKH</div>
+          <div class="action-text"><b>Triển khai tiếp nhóm chăm sóc chủ động</b>, tận dụng nền tảng quy trình đã có từ nhóm Hotline.</div>
+        </li>
+        <li class="action-item">
+          <div class="action-tag">PTSP</div>
+          <div class="action-text"><b>Cần chuẩn hoá practice AI Native</b> và quy trình mới, đảm bảo đồng bộ với tốc độ phát triển sản phẩm.</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="closing-statement">
+      "H2 nên chuyển từ <b>nhiều hoạt động đào tạo</b> sang <b>đào tạo gắn với output công việc</b>."
+    </div>
+  </div>
+
+</div>
+
+<script>
+// 1. KÍCH HOẠT CHUYỂN TAB TRƯỚC (Đảm bảo logic chuyển trang ưu tiên chạy mượt mà độc lập)
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    const targetPage = document.getElementById(btn.dataset.page);
+    if(targetPage){
+      targetPage.classList.add('active');
+    }
+  });
+});
+
+// 2. DỮ LIỆU ĐÃ ĐƯỢC CHUẨN HÓA & GỘP BLANK VÀO KHỐI PTSP & CHUẨN HÓA KHỐI BO THEO ĐẦU MÃ LỚP
+const DATA = {
+  "tong_chuong_trinh": 140, 
+  "tong_hoc_vien": 1004, 
+  "tong_luot": 4181, 
+  "module_chuongtrinh": [
+    {"module": "Chuyên môn", "soluong": 22}, 
+    {"module": "Tính năng", "soluong": 34}, 
+    {"module": "Văn hóa", "soluong": 32}, 
+    {"module": "Kỹ năng", "soluong": 34}, 
+    {"module": "Quy định", "soluong": 16}, 
+    {"module": "Leadership", "soluong": 2}
+  ], 
+  "khoi_chuongtrinh": [
+    {"khoi": "Sales", "soluong": 80}, 
+    {"khoi": "PTSP", "soluong": 65}, // Gộp 4 chương trình trống (Blank) vào PTSP (61 + 4)
+    {"khoi": "BO", "soluong": 40},   // Hiệu chỉnh đếm duy nhất (countunique) theo Mã lớp cho khối BO
+    {"khoi": "DVKH", "soluong": 14}
+  ], 
+  "doituong_chuongtrinh": [
+    {"doituong": "Nhân viên mới", "soluong": 110}, 
+    {"doituong": "Đang làm việc", "soluong": 30}
+  ], 
+  "coverage_theo_khoi": [
+    {"khoi": "Sales", "luot": 2496, "hocvien": 530, "tb_chuongtrinh": 4.71}, 
+    {"khoi": "PTSP", "luot": 1313, "hocvien": 346, "tb_chuongtrinh": 3.79}, // Gộp 17 học viên và 17 lượt của Blank vào PTSP
+    {"khoi": "DVKH", "luot": 198, "hocvien": 46, "tb_chuongtrinh": 4.3}, 
+    {"khoi": "BO", "luot": 174, "hocvien": 96, "tb_chuongtrinh": 1.81}
+  ], 
+  "training_reach": 0.6182, 
+  "tong_nhansu_congty": 1624, 
+  "mandatory_coverage": [
+    {"chuongtrinh": "Hội nhập nhân sự mới", "nhom": "Nhân sự mới", "da_hoc": 479, "tong_dien_hoc": 484, "coverage": 0.9897}, 
+    {"chuongtrinh": "Văn hóa", "nhom": "Nhân sự mới", "da_hoc": 193, "tong_dien_hoc": 484, "coverage": 0.3988}, 
+    {"chuongtrinh": "Sản phẩm cơ bản", "nhom": "Nhân sự mới", "da_hoc": 418, "tong_dien_hoc": 484, "coverage": 0.8636}, 
+    {"chuongtrinh": "Tuân thủ", "nhom": "Nhân sự mới", "da_hoc": 391, "tong_dien_hoc": 484, "coverage": 0.8079}
+  ], 
+  "tong_nhansu_moi_hoinhap": 484, 
+  "nghi_tong": 41,               // 41 người OFF trong thời gian đào tạo (đã loại bỏ TH trùng lặp)
+  "nghi_tyle": 0.0847,            
+  "nghi_theo_khoi": [
+    {"khoi": "Sales", "tong": 391, "nghi": 39, "tyle": 0.0997}, 
+    {"khoi": "PTSP", "tong": 38, "nghi": 0, "tyle": 0.0}, 
+    {"khoi": "DVKH", "tong": 19, "nghi": 1, "tyle": 0.0526}, 
+    {"khoi": "BO", "tong": 36, "nghi": 1, "tyle": 0.0278}
+  ], 
+  "nghi_theo_khuvuc": [
+    {"khuvuc": "DS Miền Bắc", "tong": 58, "nghi": 10, "tyle": 0.1724}, // Sắp xếp giảm dần từ tỷ lệ cao nhất xuống thấp nhất
+    {"khuvuc": "Contract renewal (KVS)", "tong": 14, "nghi": 2, "tyle": 0.1429},
+    {"khuvuc": "DS Mekong", "tong": 50, "nghi": 7, "tyle": 0.14}, 
+    {"khuvuc": "DS Tây Nguyên", "tong": 31, "nghi": 3, "tyle": 0.0968}, 
+    {"khuvuc": "DS Đông Bắc", "tong": 21, "nghi": 2, "tyle": 0.0952},  
+    {"khuvuc": "TSSGN", "tong": 46, "nghi": 4, "tyle": 0.087}, 
+    {"khuvuc": "DS Miền Trung", "tong": 50, "nghi": 4, "tyle": 0.08}, 
+    {"khuvuc": "DS Miền Nam", "tong": 13, "nghi": 1, "tyle": 0.0769}, 
+    {"khuvuc": "TSHN", "tong": 72, "nghi": 5, "tyle": 0.0694},         
+    {"khuvuc": "DS Hồ Chí Minh", "tong": 35, "nghi": 2, "tyle": 0.0571},
+    {"khuvuc": "Back Office & Customer Service", "tong": 47, "nghi": 1, "tyle": 0.0213}, 
+    {"khuvuc": "Data & AI", "tong": 5, "nghi": 0, "tyle": 0.0}, 
+    {"khuvuc": "Executive Office", "tong": 2, "nghi": 0, "tyle": 0.0}, 
+    {"khuvuc": "KV Finance Services", "tong": 1, "nghi": 0, "tyle": 0.0}, 
+    {"khuvuc": "KAT", "tong": 6, "nghi": 0, "tyle": 0.0}, 
+    {"khuvuc": "Production", "tong": 27, "nghi": 0, "tyle": 0.0}, 
+    {"khuvuc": "Khác", "tong": 6, "nghi": 0, "tyle": 0.0}
+  ], 
+  "lms_tong_khoahoc": 18,        // Đầu chuyên đề đào tạo chuẩn hóa đã gộp nhóm lớp
+  "lms_tong_luot": 1688, 
+  "lms_hocvien": 667, 
+  "lms_hocvien_tyle": 0.6643, 
+  "lms_completion_rate": 0.9929, 
+  "lms_pass_rate": 0.9704, 
+  "lms_top5": [
+    {"khoahoc": "Integrity", "tong": 61, "completion": 1.0, "pass": 1.0}, 
+    {"khoahoc": "Đào tạo Tính năng KiotViet Hotel", "tong": 27, "completion": 1.0, "pass": 1.0}, 
+    {"khoahoc": "COC - CRM lớp 26KV11", "tong": 22, "completion": 1.0, "pass": 1.0}, 
+    {"khoahoc": "COC - CRM lớp 26KV08", "tong": 21, "completion": 1.0, "pass": 1.0}, 
+    {"khoahoc": "Đào tạo HĐĐT - Thuế - Kế toán", "tong": 21, "completion": 1.0, "pass": 1.0}
+  ], 
+  "lms_bottom5": [
+    {"khoahoc": "COC - CRM lớp 26KV03", "tong": 38, "completion": 0.9211, "pass": 0.9211}, 
+    {"khoahoc": "COC - CRM lớp 26KV06", "tong": 42, "completion": 0.9286, "pass": 0.9286}, 
+    {"khoahoc": "COC - CRM lớp 26KV12", "tong": 32, "completion": 0.9375, "pass": 0.9062}, 
+    {"khoahoc": "Đào tạo Sản phẩm Retail 01", "tong": 19, "completion": 0.9474, "pass": 0.9474}, 
+    {"khoahoc": "COC - CRM lớp 26KV10", "tong": 47, "completion": 0.9787, "pass": 0.9787}
+  ]
+};
+
+const fmt = n => n.toLocaleString('vi-VN');
+const pct = n => (n*100).toFixed(1).replace('.0','') + '%';
+const GOLD='#C9A15A', TEAL='#4FA893', CLAY='#C1553A', PURPLE='#8B6BB0', DIM='#B9C4D6', MUTE='#7E8FA8', LINE='rgba(244,239,228,0.10)';
+
+// Cấu hình chung cho Chart.js và plugin DataLabels
+try {
+  if (typeof ChartDataLabels !== 'undefined') {
+    Chart.register(ChartDataLabels);
+  }
+} catch (e) {
+  console.warn("ChartDataLabels plugin registration failed.", e);
+}
+
+const barDatalabelConfig = {
+  display: true,
+  anchor: 'end',
+  align: 'top',
+  offset: 3,
+  color: DIM,
+  font: { family: "'Inter', sans-serif", size: 10, weight: '500' },
+  formatter: (v) => fmt(v)
+};
+
+// 3. KHỞI TẠO BIỂU ĐỒ TRONG TRY-CATCH (Đảm bảo an toàn hệ thống vẽ biểu đồ)
+try {
+  // SẮP XẾP ĐỘNG TỪ CAO XUỐNG THẤP CHO BIỂU ĐỒ MODULE (PAGE 1)
+  const sortedModuleData = [...DATA.module_chuongtrinh].sort((a, b) => b.soluong - a.soluong);
+
+  new Chart(document.getElementById('chartModule'), {
+    type:'bar',
+    data:{
+      labels: sortedModuleData.map(d=>d.module),
+      datasets:[{data: sortedModuleData.map(d=>d.soluong), backgroundColor: GOLD, borderRadius:2, maxBarThickness:46}]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins:{
+        legend:{display:false},
+        datalabels: barDatalabelConfig
+      },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:LINE}, beginAtZero:true, grace:'15%'} }
+    }
+  });
+
+  // SẮP XẾP ĐỘNG TỪ CAO XUỐNG THẤP CHO BIỂU ĐỒ KHỐI CHƯƠNG TRÌNH (PAGE 1)
+  const sortedKhoiCTData = [...DATA.khoi_chuongtrinh].sort((a, b) => b.soluong - a.soluong);
+
+  new Chart(document.getElementById('chartKhoiCT'), {
+    type:'bar',
+    data:{
+      labels: sortedKhoiCTData.map(d=>d.khoi),
+      datasets:[{data: sortedKhoiCTData.map(d=>d.soluong), backgroundColor: TEAL, borderRadius:2, maxBarThickness:40}]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins:{
+        legend:{display:false},
+        datalabels: barDatalabelConfig
+      },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:LINE}, beginAtZero:true, grace:'15%'} }
+    }
+  });
+
+  new Chart(document.getElementById('chartDoiTuongCT'), {
+    type:'doughnut',
+    data:{
+      labels: DATA.doituong_chuongtrinh.map(d=>d.doituong),
+      datasets:[{data: DATA.doituong_chuongtrinh.map(d=>d.soluong), backgroundColor:[GOLD, PURPLE], borderColor:'#182C4B', borderWidth:2}]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins:{
+        legend:{display:false}, // Ẩn hoàn toàn nhãn/subtitle thừa ở dưới biểu đồ để căn giữa tự động
+        datalabels: {
+          display: true,
+          color: '#0E1A2B',
+          font: { family: "'IBM Plex Mono', monospace", size: 11, weight: 'bold' },
+          formatter: (val, ctx) => {
+            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+            const percent = ((val/total)*100).toFixed(0) + '%';
+            return `${val} CT\n(${percent})`;
+          },
+          textAlign: 'center'
+        }
+      },
+      cutout:'60%'
+    }
+  });
+
+  // ================= BIỂU ĐỒ TRANG 2 =================
+  // BIỂU ĐỒ 2A: TRAINING REACH (DOUGHNUT)
+  const untrainedCount = DATA.tong_nhansu_congty - DATA.tong_hoc_vien;
+  new Chart(document.getElementById('chartTrainingReach'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Đã tham gia đào tạo', 'Chưa tham gia đào tạo'],
+      datasets: [{
+        data: [DATA.tong_hoc_vien, untrainedCount],
+        backgroundColor: [TEAL, 'rgba(244, 239, 228, 0.15)'],
+        borderColor: '#182C4B',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }, // Ẩn hoàn toàn nhãn/subtitle thừa ở dưới biểu đồ để căn giữa tự động
+        datalabels: {
+          display: true,
+          color: (ctx) => ctx.dataIndex === 0 ? '#0E1A2B' : DIM,
+          font: { family: "'IBM Plex Mono', monospace", size: 11, weight: 'bold' },
+          formatter: (val, ctx) => {
+            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+            const percent = ((val / total) * 100).toFixed(1) + '%';
+            return `${fmt(val)} NS\n(${percent})`;
+          },
+          textAlign: 'center'
+        }
+      },
+      cutout: '55%'
+    }
+  });
+
+  // BIỂU ĐỒ 2B: TRẠNG THÁI NHÂN SỰ MỚI TRONG LỘ TRÌNH (DOUGHNUT)
+  const activeOnboardCount = DATA.tong_nhansu_moi_hoinhap - DATA.nghi_tong;
+  new Chart(document.getElementById('chartNghiRoadmap'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Tiếp tục lộ trình', 'Đã nghỉ việc'],
+      datasets: [{
+        data: [activeOnboardCount, DATA.nghi_tong],
+        backgroundColor: [GOLD, CLAY],
+        borderColor: '#182C4B',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }, // Ẩn hoàn toàn nhãn/subtitle thừa ở dưới biểu đồ để căn giữa tự động
+        datalabels: {
+          display: true,
+          color: (ctx) => ctx.dataIndex === 0 ? '#0E1A2B' : '#F4EFE4',
+          font: { family: "'IBM Plex Mono', monospace", size: 11, weight: 'bold' },
+          formatter: (val, ctx) => {
+            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+            const percent = ((val / total) * 100).toFixed(1) + '%';
+            return `${fmt(val)} NS\n(${percent})`;
+          },
+          textAlign: 'center'
+        }
+      },
+      cutout: '55%'
+    }
+  });
+
+  // SẮP XẾP ĐỘNG TỪ CAO XUỐNG THẤP CHO BIỂU ĐỒ HỌC VIÊN THEO KHỐI (PAGE 2)
+  const sortedHocVienKhoi = [...DATA.coverage_theo_khoi].sort((a, b) => b.hocvien - a.hocvien);
+
+  new Chart(document.getElementById('chartHocVienKhoi'), {
+    type:'bar',
+    data:{
+      labels: sortedHocVienKhoi.map(d=>d.khoi),
+      datasets:[{data: sortedHocVienKhoi.map(d=>d.hocvien), backgroundColor: GOLD, borderRadius:2, maxBarThickness:40}]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins:{
+        legend:{display:false},
+        datalabels: barDatalabelConfig
+      },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:LINE}, beginAtZero:true, grace:'15%'} }
+    }
+  });
+
+  // SẮP XẾP ĐỘNG TỪ CAO XUỐNG THẤP CHO BIỂU ĐỒ TỔNG LƯỢT ĐÀO TẠO THEO KHỐI (PAGE 2)
+  const sortedLuotKhoi = [...DATA.coverage_theo_khoi].sort((a, b) => b.luot - a.luot);
+
+  new Chart(document.getElementById('chartLuotKhoi'), {
+    type:'bar',
+    data:{
+      labels: sortedLuotKhoi.map(d=>d.khoi),
+      datasets:[{data: sortedLuotKhoi.map(d=>d.luot), backgroundColor: PURPLE, borderRadius:2, maxBarThickness:40}]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins:{
+        legend:{display:false},
+        datalabels: barDatalabelConfig
+      },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:LINE}, beginAtZero:true, grace:'15%'} }
+    }
+  });
+
+  // SẮP XẾP ĐỘNG TỪ CAO XUỐNG THẤP CHO BIỂU ĐỒ SỐ CHƯƠNG TRÌNH TRUNG BÌNH THEO KHỐI (PAGE 2)
+  const sortedTBChuongTrinh = [...DATA.coverage_theo_khoi].sort((a, b) => b.tb_chuongtrinh - a.tb_chuongtrinh);
+
+  new Chart(document.getElementById('chartTBChuongTrinhKhoi'), {
+    type:'bar',
+    data:{
+      labels: sortedTBChuongTrinh.map(d=>d.khoi),
+      datasets:[{data: sortedTBChuongTrinh.map(d=>d.tb_chuongtrinh), backgroundColor: TEAL, borderRadius:2, maxBarThickness:40}]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      plugins:{
+        legend:{display:false},
+        datalabels: {
+          display: true,
+          anchor: 'end',
+          align: 'top',
+          color: DIM,
+          font: { family: "'IBM Plex Mono', monospace", size: 10, weight: '600' },
+          formatter: (v) => v.toFixed(2)
+        }
+      },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:LINE}, beginAtZero:true, grace:'15%'} }
+    }
+  });
+
+  // SẮP XẾP ĐỘNG TỪ CAO XUỐNG THẤP CHO BIỂU ĐỒ TỶ LỆ NGHỈ THEO KHỐI (PAGE 2)
+  const sortedNghiKhoi = [...DATA.nghi_theo_khoi].sort((a, b) => b.nghi - a.nghi);
+
+  new Chart(document.getElementById('chartNghiKhoi'), {
+    type: 'doughnut',
+    data: {
+      labels: sortedNghiKhoi.map(d=>d.khoi),
+      datasets: [{
+        data: sortedNghiKhoi.map(d=>d.nghi),
+        backgroundColor: [CLAY, TEAL, GOLD, PURPLE],
+        borderColor: '#182C4B',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }, // Ẩn hoàn toàn legend để căn giữa tự động
+        datalabels: {
+          display: true,
+          color: (ctx) => ctx.dataIndex === 0 ? '#F4EFE4' : '#0E1A2B',
+          font: { family: "'IBM Plex Mono', monospace", size: 10.5, weight: 'bold' },
+          formatter: (val, ctx) => {
+            if (val === 0) return ''; // Ẩn nhãn cho các khối có 0 người nghỉ để tránh chồng chéo chữ
+            // LƯỢC BỎ HIỂN THỊ PHẦN TRĂM (%) THEO YÊU CẦU ĐỂ BIỂU ĐỒ THOÁNG HƠN
+            return `${val} NS`;
+          },
+          textAlign: 'center'
+        }
+      },
+      cutout: '55%'
+    }
+  });
+
+} catch (err) {
+  console.error("An error occurred during Chart.js rendering.", err);
+}
+
+// 4. KẾT XUẤT CÁC BẢNG & SỐ LIỆU ĐĂNG KÝ (Đầy đủ dữ liệu cho các Page)
+// Số liệu Page 1
+document.getElementById('kpi-tongct').textContent = fmt(DATA.tong_chuong_trinh);
+document.getElementById('kpi-tonghv').textContent = fmt(DATA.tong_hoc_vien);
+document.getElementById('kpi-tongluot').textContent = fmt(DATA.tong_luot);
+
+// Số liệu Page 2
+document.getElementById('kpi2-hocvien').textContent = fmt(DATA.tong_hoc_vien);
+document.getElementById('kpi2-luot').textContent = fmt(DATA.tong_luot);
+document.getElementById('kpi2-reach').textContent = pct(DATA.training_reach);
+document.getElementById('kpi2-reach-sub').textContent = `${fmt(DATA.tong_hoc_vien)} / ${fmt(DATA.tong_nhansu_congty)} nhân sự`;
+document.getElementById('kpi2-onboard').textContent = fmt(DATA.tong_nhansu_moi_hoinhap);
+document.getElementById('kpi2-nghi').textContent = fmt(DATA.nghi_tong);
+document.getElementById('kpi2-nghi-sub').textContent = pct(DATA.nghi_tyle) + ` trên ${fmt(DATA.tong_nhansu_moi_hoinhap)} nhân sự mới`;
+document.getElementById('tong-dien-hoc').textContent = fmt(DATA.tong_nhansu_moi_hoinhap);
+document.getElementById('tong-nhansu-note').textContent = fmt(DATA.tong_nhansu_congty);
+
+const mandatoryList = document.getElementById('mandatoryList');
+DATA.mandatory_coverage.forEach(d=>{
+  mandatoryList.innerHTML += `
+    <div class="track-row">
+      <div class="track-top">
+        <span class="track-name">${d.chuongtrinh}</span>
+        <span class="track-pct">${pct(d.coverage)}</span>
+      </div>
+      <div class="track-bar-bg"><div class="track-bar-fill" style="width:${(d.coverage*100).toFixed(1)}%"></div></div>
+      <div class="track-sub">${fmt(d.da_hoc)} / ${fmt(d.tong_dien_hoc)} nhân sự mới đã hoàn thành</div>
+    </div>`;
+});
+const tblMandatory = document.getElementById('tblMandatory');
+DATA.mandatory_coverage.forEach(d=>{
+  const color = d.coverage < 0.6 ? '#E27D63' : 'var(--teal)';
+  tblMandatory.innerHTML += `<tr><td class="name">${d.chuongtrinh}</td><td>${d.nhom}</td><td class="num">${fmt(d.da_hoc)}</td><td class="num">${fmt(d.tong_dien_hoc)}</td><td class="num" style="color:${color}">${pct(d.coverage)}</td></tr>`;
+});
+
+const tblNghiKhuVuc = document.getElementById('tblNghiKhuVuc');
+DATA.nghi_theo_khuvuc.forEach(d=>{
+  const color = d.nghi>0 ? '#E27D63' : 'var(--ink-mute)';
+  tblNghiKhuVuc.innerHTML += `<tr><td class="name">${d.khuvuc}</td><td class="num">${fmt(d.tong)}</td><td class="num" style="color:${color}">${fmt(d.nghi)}</td><td class="num" style="color:${color}">${pct(d.tyle)}</td></tr>`;
+});
+
+// Số liệu Page 3
+document.getElementById('kpi3-khoahoc').textContent = fmt(DATA.lms_tong_khoahoc);
+document.getElementById('kpi3-hocvien').textContent = fmt(DATA.lms_hocvien);
+document.getElementById('kpi3-hocvien-sub').textContent = pct(DATA.lms_hocvien_tyle) + ` / ${fmt(DATA.tong_hoc_vien)} tổng học viên`;
+document.getElementById('kpi3-completion').textContent = pct(DATA.lms_completion_rate);
+document.getElementById('kpi3-pass').textContent = pct(DATA.lms_pass_rate);
+
+const tblTop5 = document.getElementById('tblTop5');
+DATA.lms_top5.forEach(d=>{
+  tblTop5.innerHTML += `<tr><td class="name">${d.khoahoc}</td><td class="num">${fmt(d.tong)}</td><td class="num" style="color:var(--teal)">${pct(d.completion)}</td><td class="num" style="color:var(--teal)">${pct(d.pass)}</td></tr>`;
+});
+
+// THỰC HIỆN SẮP XẾP ĐỘNG: SẮP XẾP BOTTOM 5 TỪ THẤP LÊN CAO (TĂNG DẦN THEO TỶ LỆ COMPLETION/PASS)
+const sortedBottom5 = [...DATA.lms_bottom5].sort((a, b) => {
+  if (a.completion === b.completion) {
+    return a.pass - b.pass; // Nếu tỷ lệ Completion bằng nhau thì ưu tiên tỷ lệ Pass thấp hơn lên trước
+  }
+  return a.completion - b.completion; // Sắp xếp tăng dần theo tỷ lệ Completion
+});
+
+const tblBottom5 = document.getElementById('tblBottom5');
+sortedBottom5.forEach(d=>{
+  tblBottom5.innerHTML += `<tr><td class="name">${d.khoahoc}</td><td class="num">${fmt(d.tong)}</td><td class="num" style="color:#E27D63">${pct(d.completion)}</td><td class="num" style="color:#E27D63">${pct(d.pass)}</td></tr>`;
+});
+</script>
+</body>
+</html>
